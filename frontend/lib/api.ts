@@ -1,14 +1,20 @@
-// lib/api.ts — Fetch helpers for the Willow FastAPI backend
+// lib/api.ts — API helpers for Willow
+// Calls Next.js API routes (/api/analyze, /api/chat)
+// No external backend needed — everything runs on Vercel
 
 import type { AnalyzeRequest, AnalyzeResponse } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Always call our own Next.js API routes
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  // Relative paths work in the browser; server components need absolute URL
+  const base =
+    typeof window === "undefined"
+      ? process.env.NEXT_PUBLIC_SITE_URL
+        ? `https://${process.env.NEXT_PUBLIC_SITE_URL}`
+        : "http://localhost:3000"
+      : "";
 
-async function apiFetch<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${base}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
@@ -21,42 +27,34 @@ async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
-/**
- * POST /analyze — Send recent logs to Gemini for BCBA analysis
- */
-export async function analyzeLogs(
-  payload: AnalyzeRequest
-): Promise<AnalyzeResponse> {
-  return apiFetch<AnalyzeResponse>("/analyze", {
+/** POST /api/analyze — BCBA log analysis */
+export async function analyzeLogs(payload: AnalyzeRequest): Promise<AnalyzeResponse> {
+  return apiFetch<AnalyzeResponse>("/api/analyze", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-/**
- * GET /health — Liveness check
- */
-export async function checkHealth(): Promise<{ status: string }> {
-  return apiFetch<{ status: string }>("/health");
-}
-
-/**
- * POST /chat — Multi-turn chat with log context
- */
+/** POST /api/chat — Multi-turn chat with log context */
 export async function sendChatMessage(payload: {
   profile_name: string;
-  message: string;
-  history: { role: string; content: string }[];
+  message:      string;
+  history:      { role: string; content: string }[];
   logs: {
-    mood: number;
-    sleep: number;
+    mood:        number;
+    sleep:       number;
     medications: string[];
-    notes?: string;
+    notes?:      string;
     created_at?: string;
   }[];
 }): Promise<{ reply: string }> {
-  return apiFetch<{ reply: string }>("/chat", {
+  return apiFetch<{ reply: string }>("/api/chat", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** GET /api/health — Liveness check */
+export async function checkHealth(): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>("/api/health");
 }
