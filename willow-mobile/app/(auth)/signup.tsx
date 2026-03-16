@@ -8,6 +8,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
+import GoogleButton from "@/components/GoogleButton";
 import { useTheme } from "@/lib/ThemeContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -97,6 +98,16 @@ export default function SignupScreen() {
           <View style={[s.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
             <Text style={[s.title, { color: tokens.text }]}>Create your account</Text>
             <Text style={[s.subtitle, { color: tokens.textMuted }]}>Start coordinating care in minutes.</Text>
+
+            {/* Google OAuth - note: Google users go to /setup for child name */}
+            <GoogleButton label="Sign up with Google" />
+
+            {/* Divider */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 18 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: tokens.border }} />
+              <Text style={{ fontSize: 12, color: tokens.textSubtle, fontWeight: "500" }}>or sign up with email</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: tokens.border }} />
+            </View>
 
             <View style={s.fieldGroup}>
               <Text style={[s.label, { color: tokens.text }]}>Care recipient's name</Text>

@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { Leaf, UserPlus } from "lucide-react";
 import Link from "next/link";
+import GoogleButton from "@/components/GoogleButton";
 
 export default function SignupPage() {
   const router = useRouter();
+  const [childName, setChildName] = useState("");
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
-  const [childName, setChildName] = useState("");
   const [error,     setError]     = useState<string | null>(null);
   const [loading,   setLoading]   = useState(false);
   const [done,      setDone]      = useState(false);
@@ -37,10 +38,10 @@ export default function SignupPage() {
   if (done) return (
     <main className="min-h-dvh flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
       <div className="rounded-2xl p-8 max-w-md w-full text-center animate-fade-up" style={cardStyle}>
-        <div className="text-4xl mb-4">&#127807;</div>
+        <div className="text-4xl mb-4">🌿</div>
         <h1 className="font-display text-2xl font-semibold mb-2" style={{ color: "var(--color-text)" }}>Check your email</h1>
         <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          We sent a confirmation link to <strong>{email}</strong>. Click it then{" "}
+          We sent a confirmation to <strong>{email}</strong>. Click it then{" "}
           <Link href="/login" className="underline" style={{ color: "var(--color-accent)" }}>sign in</Link>.
         </p>
       </div>
@@ -50,8 +51,11 @@ export default function SignupPage() {
   return (
     <main className="min-h-dvh flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
       <div className="w-full max-w-md animate-fade-up">
+
+        {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--color-accent)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--color-accent)" }}>
             <Leaf size={20} style={{ color: "var(--color-accent-text)" }} />
           </div>
           <span className="font-display text-2xl font-semibold" style={{ color: "var(--color-accent)" }}>Willow</span>
@@ -61,7 +65,20 @@ export default function SignupPage() {
           <h1 className="font-display text-2xl font-semibold mb-1" style={{ color: "var(--color-text)" }}>
             Create your account
           </h1>
-          <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>Start coordinating care in minutes.</p>
+          <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+            Start coordinating care in minutes.
+          </p>
+
+          {/* Google OAuth — note: Google users still need to enter child name
+              The /auth/callback page collects it after Google redirects back */}
+          <GoogleButton label="Sign up with Google" />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
+            <span className="text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>or sign up with email</span>
+            <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
+          </div>
 
           <form onSubmit={handleSignup} noValidate className="space-y-4">
             <div>
@@ -82,13 +99,14 @@ export default function SignupPage() {
               <input id="password" type="password" autoComplete="new-password" required minLength={8}
                 value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="At least 8 characters" />
             </div>
+
             {error && (
               <p role="alert" className="text-sm rounded-lg p-3"
                 style={{ background: "rgba(239,68,68,0.1)", color: "var(--color-danger)", border: "1px solid rgba(239,68,68,0.3)" }}>
                 {error}
               </p>
             )}
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-2" aria-busy={loading}>
+            <button type="submit" disabled={loading} className="btn-primary w-full justify-center" aria-busy={loading}>
               <UserPlus size={17} aria-hidden="true" />
               {loading ? "Creating account…" : "Create account"}
             </button>
@@ -96,9 +114,8 @@ export default function SignupPage() {
 
           <p className="text-sm mt-5 text-center" style={{ color: "var(--color-text-muted)" }}>
             Already have an account?{" "}
-            <Link href="/login" className="font-medium underline underline-offset-2" style={{ color: "var(--color-accent)" }}>
-              Sign in
-            </Link>
+            <Link href="/login" className="font-medium underline underline-offset-2"
+              style={{ color: "var(--color-accent)" }}>Sign in</Link>
           </p>
         </div>
       </div>

@@ -41,18 +41,12 @@
           "image": "./assets/splash.png",
           "backgroundColor": "#f4f7f4"
         }
-      ]
+      ],
+      "expo-auth-session",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "7a065adc-e055-4519-8a2d-852a9724b6b4"
-      }
     }
   }
 }

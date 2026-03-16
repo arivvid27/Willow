@@ -1,47 +1,120 @@
-# Root .gitignore for Willow
+# ============================================================
+#  🌿 Willow — .gitignore
+#  Place this at the repo root (next to backend/, frontend/, etc.)
+# ============================================================
 
-# ── Node / frontend dependencies ────────────────────────────────
-node_modules/
-/.pnp
-.pnp.js
+# ── Environment variables (NEVER commit these) ────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+*.env
 
-# Testing / coverage
-coverage/
-
-# Next.js build output
-frontend/.next/
-frontend/out/
-
-# Generic builds
-build/
-dist/
-
-# Backend virtualenvs
-backend/.venv/
+# ── Python / Backend ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
 venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
 
-# Misc
-.DS_Store
-*.pem
-
-# Debug logs
+# ── Node / Frontend ───────────────────────────────────────────
+node_modules/
+.npm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Local env files
-.env
-.env*.local
-frontend/.env*
-backend/.env*
+# ── Next.js ───────────────────────────────────────────────────
+.next/
+out/
+.vercel/
 
-# Vercel
-.vercel
+# ── Expo / React Native / Mobile ─────────────────────────────
+.expo/
+dist/
+web-build/
+android/
+ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+# Expo generated files
+expo-env.d.ts
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
+# ── OS files ─────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-# Cursor / IDE
-.cursor/
+# ── Editor / IDE ─────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+lerna-debug.log*
+
+# ── Build outputs ────────────────────────────────────────────
+build/
+dist/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# ── Temporary / misc ─────────────────────────────────────────
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+*.orig
+.willow_render_token
+.willow_koyeb_token
+
+# ── Docker (kept but secrets excluded) ───────────────────────
+# Dockerfile and docker-compose.yml are fine to commit
+# but never commit .env used by docker
+
+# ── Keep these ───────────────────────────────────────────────
+# These are intentionally NOT ignored:
+# - render.yaml
+# - eas.json
+# - firebase.json  
+# - app.json
+# - assets/ (PNG icons etc.)
