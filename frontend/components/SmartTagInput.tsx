@@ -19,21 +19,10 @@ interface SmartTagInputProps {
 
 const SEED_SUGGESTIONS: Record<string, string[]> = {
   medication: [
-    "Risperidone", "Aripiprazole", "Methylphenidate", "Amphetamine",
-    "Sertraline", "Fluoxetine", "Clonidine", "Guanfacine",
-    "Melatonin", "Lorazepam", "Valproate", "Lamotrigine",
   ],
   food: [
-    "Oatmeal", "Eggs", "Toast", "Banana", "Apple", "Yogurt",
-    "Chicken", "Rice", "Pasta", "Broccoli", "Carrots", "Sandwich",
-    "Pizza", "Mac & Cheese", "Hot Dog", "Grilled Cheese",
-    "Orange Juice", "Milk", "Water", "Crackers", "Fruit Cup",
-    "Peanut Butter", "Granola Bar", "Cheese", "Soup",
   ],
   outdoor_activity: [
-    "Playground", "Bike ride", "Walk", "Trampoline", "Swimming",
-    "Park visit", "Nature walk", "Sports", "Scooter", "Sandbox",
-    "Gardening", "Ball play", "Running", "Swing set",
   ],
 };
 

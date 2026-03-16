@@ -41,14 +41,23 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────
+# FRONTEND_URL can be a comma-separated list of allowed origins.
+# Supports Firebase Hosting, Vercel, and custom domains.
+# e.g. "https://your-app.web.app,https://www.myapp.com"
+
+def _get_allowed_origins() -> list[str]:
+    base = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    extra = os.getenv("FRONTEND_URL", "")
+    if extra:
+        base.extend([u.strip() for u in extra.split(",") if u.strip()])
+    return base
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        os.getenv("FRONTEND_URL", ""),   # set in production
-    ],
+    allow_origins=_get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

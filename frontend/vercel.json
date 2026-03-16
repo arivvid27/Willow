@@ -1,0 +1,11 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@willow_api_url",
+    "NEXT_PUBLIC_SUPABASE_URL": "@willow_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@willow_supabase_anon_key"
+  }
+}
