@@ -19,10 +19,11 @@ interface InviteCode {
 }
 
 interface TeamMember {
-  user_id:   string;
-  role:      string;
-  email?:    string;
-  joined_at: string;
+  user_id:      string;
+  role:         string;
+  email:        string;
+  full_name:    string;
+  joined_at:    string;
 }
 
 function CodeBadge({ code, onCopy }: { code: string; onCopy: () => void }) {
@@ -77,20 +78,28 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const { data: access } = await supabase
-      .from("caregiver_access")
-      .select("profile_id, role, profiles(child_name, full_name)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
+    // Use the active profile from localStorage (set by sidebar switcher)
+    const savedId = typeof window !== "undefined"
+      ? localStorage.getItem("willow:active_profile") : null;
 
-    if (!access) { setLoading(false); return; }
+    // Fetch all profiles for this user
+    const { data: allAccess } = await supabase
+      .from("caregiver_access")
+      .select("profile_id, role, profiles(id, child_name, full_name)")
+      .eq("user_id", user.id);
+
+    if (!allAccess || allAccess.length === 0) { setLoading(false); return; }
+
+    // Pick the active one
+    const access = (savedId
+      ? allAccess.find((a: any) => a.profile_id === savedId)
+      : allAccess[0]) ?? allAccess[0];
 
     const pid = access.profile_id;
     setProfileId(pid);
     setIsOwner(access.role === "owner");
     const p = (access as any).profiles;
-    setProfileName(p?.full_name || p?.child_name || "");
+    setProfileName(p?.full_name || p?.child_name || "Unknown");
 
     // Load invite codes (owner only)
     if (access.role === "owner") {
@@ -103,12 +112,16 @@ export default function SettingsPage() {
       setCodes(codesData ?? []);
     }
 
-    // Load team members
+    // Load team members with names + emails via secure RPC function
     const { data: teamData } = await supabase
-      .from("caregiver_access")
-      .select("user_id, role, created_at")
-      .eq("profile_id", pid);
-    setTeam((teamData ?? []).map((t: any) => ({ user_id: t.user_id, role: t.role, joined_at: t.created_at })));
+      .rpc("get_team_members", { p_profile_id: pid });
+    setTeam((teamData ?? []).map((t: any) => ({
+      user_id:   t.user_id,
+      role:      t.role,
+      email:     t.email      ?? "",
+      full_name: t.full_name  ?? t.email?.split("@")[0] ?? "Caregiver",
+      joined_at: t.joined_at,
+    })));
 
     setLoading(false);
   }, [router]);
@@ -406,16 +419,16 @@ export default function SettingsPage() {
             <div key={m.user_id} className="flex items-center justify-between p-3 rounded-xl"
               style={{ background: "var(--color-bg-subtle)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                   style={{ background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
-                  {m.role[0].toUpperCase()}
+                  {(m.full_name || m.email || "?")[0].toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                    {m.user_id.slice(0, 8)}…
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
+                    {m.full_name || m.email.split("@")[0]}
                   </p>
-                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                    Joined {new Date(m.joined_at).toLocaleDateString()}
+                  <p className="text-xs truncate" style={{ color: "var(--color-text-subtle)" }}>
+                    {m.email} · Joined {new Date(m.joined_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>

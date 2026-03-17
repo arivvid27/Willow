@@ -12,8 +12,9 @@ import Link from "next/link";
 
 export default function InsightsPage() {
   const router = useRouter();
-  const [profileName, setProfileName] = useState("");
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [profileName,    setProfileName]    = useState<string>("");
+  const [profileContext, setProfileContext] = useState<string>("");
+  const [logs,           setLogs]           = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +25,18 @@ export default function InsightsPage() {
       if (!user) { router.push("/login"); return; }
 
       // Get profile
-      const { data: access, error: accessErr } = await supabase
+      const { data: allAccessData } = await supabase
         .from("caregiver_access")
-        .select("profile_id, profiles(child_name, id)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+        .select("profile_id, profiles(child_name, id, full_name, diagnoses, allergies, therapist_name, school_name, additional_notes)")
+        .eq("user_id", user.id);
+
+      const savedId = typeof window !== "undefined"
+        ? localStorage.getItem("willow:active_profile") : null;
+      const accessArr2 = allAccessData ?? [];
+      const access = (savedId
+        ? accessArr2.find((a: any) => a.profile_id === savedId)
+        : accessArr2[0]) ?? accessArr2[0];
+      const accessErr = !access;
 
       if (accessErr || !access) {
         setError("No profile found.");
@@ -113,7 +120,7 @@ export default function InsightsPage() {
       </header>
 
       <div className="animate-fade-up stagger-2">
-        <InsightCard profileName={profileName} logs={logs} profileContext={profileContext} />
+        <InsightCard profileName={profileName} logs={logs} profileContext={profileContext ?? ""} />
       </div>
 
       {logs.length === 0 && (

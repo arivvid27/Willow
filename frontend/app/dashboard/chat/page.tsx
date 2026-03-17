@@ -29,14 +29,16 @@ export default function ChatPage() {
       }
 
       // Get profile
-      const { data: access, error: accessErr } = await supabase
+      const { data: allChatAccess } = await supabase
         .from("caregiver_access")
-        .select("profile_id, profiles(child_name, id)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+        .select("profile_id, profiles(child_name, id, full_name)")
+        .eq("user_id", user.id);
+      const savedChatId = typeof window !== "undefined"
+        ? localStorage.getItem("willow:active_profile") : null;
+      const chatArr = allChatAccess ?? [];
+      const access = (savedChatId ? chatArr.find((a: any) => a.profile_id === savedChatId) : chatArr[0]) ?? chatArr[0];
 
-      if (accessErr || !access) {
+      if (!access) {
         setError("No profile found.");
         setLoading(false);
         return;

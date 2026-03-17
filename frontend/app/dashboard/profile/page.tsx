@@ -111,12 +111,17 @@ export default function CareProfilePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const { data: access } = await supabase
+    const { data: allAccess } = await supabase
       .from("caregiver_access")
       .select("profile_id, role, profiles(*)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
+      .eq("user_id", user.id);
+
+    const savedId = typeof window !== "undefined"
+      ? localStorage.getItem("willow:active_profile") : null;
+    const accessArr = allAccess ?? [];
+    const access = (savedId
+      ? accessArr.find((a: any) => a.profile_id === savedId)
+      : accessArr[0]) ?? accessArr[0];
 
     if (!access) { setError("No profile found."); setLoading(false); return; }
 

@@ -59,63 +59,66 @@ function DeleteModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onCancel}
         aria-hidden="true"
       />
-      <div className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none">
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-label="Confirm delete log"
-          className="animate-fade-up pointer-events-auto"
-          style={{
-            width:        "min(400px, calc(100vw - 32px))",
-            borderRadius: "16px",
-            background:   "var(--color-surface)",
-            border:       "1px solid var(--color-border)",
-            boxShadow:    "0 24px 64px rgba(0,0,0,0.22)",
-            padding:      "24px",
-          }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(239,68,68,0.12)" }}
-            >
-              <AlertTriangle size={20} style={{ color: "var(--color-danger)" }} aria-hidden="true" />
-            </div>
-            <h2 className="font-display font-semibold text-lg" style={{ color: "var(--color-text)" }}>
-              Delete this log?
-            </h2>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="Confirm delete log"
+        className="animate-fade-up"
+        style={{
+          position:     "fixed",
+          top:          "50%",
+          left:         "50%",
+          transform:    "translate(-50%, -50%)",
+          width:        "min(400px, calc(100vw - 32px))",
+          zIndex:       60,
+          borderRadius: "16px",
+          background:   "var(--color-surface)",
+          border:       "1px solid var(--color-border)",
+          boxShadow:    "0 24px 64px rgba(0,0,0,0.22)",
+          padding:      "24px",
+        }}
+      >
+        <div className="flex items-center gap-3 mb-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(239,68,68,0.12)" }}
+          >
+            <AlertTriangle size={20} style={{ color: "var(--color-danger)" }} aria-hidden="true" />
           </div>
-          <p className="text-sm mb-5" style={{ color: "var(--color-text-muted)" }}>
-            This log entry will be permanently deleted. This action cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={onConfirm}
-              disabled={loading}
-              aria-busy={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-              style={{
-                background: "var(--color-danger)",
-                color:      "white",
-                border:     "none",
-                cursor:     loading ? "not-allowed" : "pointer",
-                opacity:    loading ? 0.6 : 1,
-              }}
-            >
-              {loading ? <LoadingSpinner size={14} label="Deleting…" /> : <Trash2 size={14} />}
-              {loading ? "Deleting…" : "Yes, delete"}
-            </button>
-            <button
-              onClick={onCancel}
-              className="btn-ghost text-sm px-4 py-2"
-            >
-              <X size={14} /> Cancel
-            </button>
-          </div>
+          <h2 className="font-display font-semibold text-lg" style={{ color: "var(--color-text)" }}>
+            Delete this log?
+          </h2>
+        </div>
+        <p className="text-sm mb-5" style={{ color: "var(--color-text-muted)" }}>
+          This log entry will be permanently deleted. This action cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            aria-busy={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={{
+              background: "var(--color-danger)",
+              color:      "white",
+              border:     "none",
+              cursor:     loading ? "not-allowed" : "pointer",
+              opacity:    loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? <LoadingSpinner size={14} label="Deleting…" /> : <Trash2 size={14} />}
+            {loading ? "Deleting…" : "Yes, delete"}
+          </button>
+          <button
+            onClick={onCancel}
+            className="btn-ghost text-sm px-4 py-2"
+          >
+            <X size={14} /> Cancel
+          </button>
         </div>
       </div>
     </>
@@ -278,14 +281,17 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const { data: accessRows, error: accessErr } = await supabase
+    const { data: allRows } = await supabase
       .from("caregiver_access")
       .select("profile_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
+      .eq("user_id", user.id);
 
-    if (accessErr || !accessRows) {
+    const savedId = typeof window !== "undefined"
+      ? localStorage.getItem("willow:active_profile") : null;
+    const arr = allRows ?? [];
+    const accessRows = (savedId ? arr.find((r: any) => r.profile_id === savedId) : arr[0]) ?? arr[0];
+
+    if (!accessRows) {
       setError("No profile found. Please complete account setup.");
       setLoading(false);
       return;
@@ -465,10 +471,10 @@ export default function DashboardPage() {
               >
                 <LogCard log={log} />
 
-                {/* Delete button — appears on hover */}
+                {/* Delete button — hover on desktop, always visible on mobile */}
                 <button
                   onClick={() => setDeletingId(log.id)}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all"
+                  className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all touch-visible-delete"
                   style={{
                     background: "var(--color-surface)",
                     border:     "1px solid var(--color-border)",

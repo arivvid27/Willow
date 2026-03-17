@@ -24,12 +24,15 @@ export default function NewLogPage() {
       if (!user) { router.push("/login"); return; }
       setUserId(user.id);
 
-      const { data: access, error: accessErr } = await supabase
+      const { data: allLogAccess } = await supabase
         .from("caregiver_access")
         .select("profile_id, profiles(child_name)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
+        .eq("user_id", user.id);
+      const savedLogId = typeof window !== "undefined"
+        ? localStorage.getItem("willow:active_profile") : null;
+      const logArr = allLogAccess ?? [];
+      const access = (savedLogId ? logArr.find((a: any) => a.profile_id === savedLogId) : logArr[0]) ?? logArr[0];
+      const accessErr = !access;
 
       if (accessErr || !access) {
         setError("Could not find your profile. Please check your account setup.");
