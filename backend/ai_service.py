@@ -58,7 +58,7 @@ def build_log_text(request: AnalyzeRequest) -> str:
 async def analyze_logs(request: AnalyzeRequest) -> AnalyzeResponse:
     """Send logs to Gemini and parse the structured response."""
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.5-flash",
         system_instruction=SYSTEM_PROMPT,
         generation_config=genai.GenerationConfig(
             response_mime_type="application/json",

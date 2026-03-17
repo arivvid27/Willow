@@ -43,6 +43,16 @@ export default function InsightsPage() {
       const pId: string = access.profiles?.id ?? access.profile_id;
       setProfileName(pName);
 
+      // Build AI context string from care profile fields
+      const prof = (access as any).profiles;
+      const ctxParts: string[] = [];
+      if (prof?.diagnoses?.length)       ctxParts.push(`Diagnoses: ${prof.diagnoses.join(", ")}`);
+      if (prof?.allergies?.length)       ctxParts.push(`Allergies/Sensitivities: ${prof.allergies.join(", ")}`);
+      if (prof?.therapist_name)          ctxParts.push(`Therapist: ${prof.therapist_name}`);
+      if (prof?.school_name)             ctxParts.push(`School: ${prof.school_name}`);
+      if (prof?.additional_notes)        ctxParts.push(`Additional context: ${prof.additional_notes}`);
+      if (ctxParts.length) setProfileContext(ctxParts.join("\n"));
+
       // Fetch last 7 days of logs
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -103,7 +113,7 @@ export default function InsightsPage() {
       </header>
 
       <div className="animate-fade-up stagger-2">
-        <InsightCard profileName={profileName} logs={logs} />
+        <InsightCard profileName={profileName} logs={logs} profileContext={profileContext} />
       </div>
 
       {logs.length === 0 && (

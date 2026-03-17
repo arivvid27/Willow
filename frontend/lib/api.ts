@@ -28,7 +28,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 /** POST /api/analyze — BCBA log analysis */
-export async function analyzeLogs(payload: AnalyzeRequest): Promise<AnalyzeResponse> {
+export async function analyzeLogs(payload: AnalyzeRequest & { profile_context?: string }): Promise<AnalyzeResponse> {
   return apiFetch<AnalyzeResponse>("/api/analyze", {
     method: "POST",
     body: JSON.stringify(payload),

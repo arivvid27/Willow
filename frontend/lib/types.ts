@@ -36,7 +36,8 @@ export interface LogFormValues {
 }
 
 export interface AnalyzeRequest {
-  profile_name: string;
+  profile_name:    string;
+  profile_context?: string;
   logs: {
     mood: number;
     sleep: number;

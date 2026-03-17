@@ -15,8 +15,9 @@ interface LogEntry {
 }
 
 interface AnalyzeRequest {
-  profile_name: string;
-  logs:         LogEntry[];
+  profile_name:    string;
+  profile_context?: string;  // diagnoses, allergies, notes etc from care profile
+  logs:            LogEntry[];
 }
 
 // ── BCBA system prompt (identical to ai_service.py) ───────────────────────────
@@ -50,8 +51,13 @@ You MUST respond in the following JSON format exactly:
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildLogText(profileName: string, logs: LogEntry[]): string {
+function buildLogText(profileName: string, logs: LogEntry[], profileContext?: string): string {
   const lines = [`Care Recipient: ${profileName}`, ""];
+  if (profileContext) {
+    lines.push("--- Care Profile Context ---");
+    lines.push(profileContext);
+    lines.push("");
+  }
   logs.forEach((log, i) => {
     const date = log.created_at ?? `Day ${i + 1}`;
     const meds = log.medications?.length ? log.medications.join(", ") : "None recorded";
@@ -94,12 +100,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const logText = buildLogText(body.profile_name, body.logs);
+    const logText = buildLogText(body.profile_name, body.logs, body.profile_context);
     const userMessage = `Please analyze the following ${body.logs.length} care logs and provide your BCBA insights:\n\n${logText}`;
 
     // Call Gemini REST API directly — no SDK needed, no extra npm packages
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

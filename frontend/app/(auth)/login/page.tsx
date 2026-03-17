@@ -27,7 +27,6 @@ export default function LoginPage() {
       style={{ background: "var(--color-bg)" }}>
       <div className="w-full max-w-md animate-fade-up">
 
-        {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{ background: "var(--color-accent)" }} aria-hidden="true">
@@ -40,7 +39,6 @@ export default function LoginPage() {
 
         <div className="rounded-2xl p-8"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-md)" }}>
-
           <h1 className="font-display text-2xl font-semibold mb-1" style={{ color: "var(--color-text)" }}>
             Welcome back
           </h1>
@@ -48,17 +46,15 @@ export default function LoginPage() {
             Sign in to your care team account
           </p>
 
-          {/* Google OAuth */}
+          {/* Google sign-in */}
           <GoogleButton label="Sign in with Google" />
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
             <span className="text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>or</span>
             <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
           </div>
 
-          {/* Email + password form */}
           <form onSubmit={handleLogin} noValidate className="space-y-4">
             <div>
               <label htmlFor="email" className="label">Email address</label>

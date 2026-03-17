@@ -9,13 +9,14 @@ import { Sparkles, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from "lucide
 import LoadingSpinner from "./LoadingSpinner";
 
 interface InsightCardProps {
-  profileName: string;
-  logs: Log[];
+  profileName:     string;
+  logs:            Log[];
+  profileContext?: string;
 }
 
 type SectionKey = "summary" | "pattern_analysis" | "suggested_adjustments";
 
-export default function InsightCard({ profileName, logs }: InsightCardProps) {
+export default function InsightCard({ profileName, logs, profileContext }: InsightCardProps) {
   const [result,   setResult]   = useState<AnalyzeResponse | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
@@ -28,7 +29,8 @@ export default function InsightCard({ profileName, logs }: InsightCardProps) {
     setLoading(true); setError(null); setResult(null);
     try {
       const data = await analyzeLogs({
-        profile_name: profileName,
+        profile_name:    profileName,
+        profile_context: profileContext,
         logs: recentLogs.map((l) => ({
           mood: l.mood, sleep: l.sleep, medications: l.medications ?? [],
           notes: l.notes ?? undefined, created_at: l.created_at,

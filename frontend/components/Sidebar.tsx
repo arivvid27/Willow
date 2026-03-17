@@ -7,7 +7,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import {
   Leaf, LayoutDashboard, PlusCircle, Sparkles,
-  MessageCircle, Settings, LogOut, Menu, X, Moon, Sun,
+  MessageCircle, Settings, LogOut, Menu, X, Moon, Sun, UserCircle, Users,
 } from "lucide-react";
 import { useState } from "react";
 import AppearancePanel from "./AppearancePanel";
@@ -17,6 +17,8 @@ const NAV_ITEMS = [
   { href: "/dashboard/log",      label: "New Log",         icon: PlusCircle },
   { href: "/dashboard/insights", label: "AI Insights",     icon: Sparkles },
   { href: "/dashboard/chat",     label: "Chat with Willow",icon: MessageCircle },
+  { href: "/dashboard/profile",  label: "Care Profile",    icon: UserCircle },
+  { href: "/dashboard/settings", label: "Team & Invite",   icon: Users },
 ];
 
 export default function Sidebar() {
