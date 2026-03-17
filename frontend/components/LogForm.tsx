@@ -7,15 +7,36 @@ import { getSupabase } from "@/lib/supabase";
 import {
   Moon, Smile, FileText, Save, Clock,
   School, TreePine, Home, Monitor, Utensils, Pill,
+  Send, Edit3, Clock3,
 } from "lucide-react";
 import LoadingSpinner from "./LoadingSpinner";
 import SmartTagInput from "./SmartTagInput";
 import clsx from "clsx";
 
 interface LogFormProps {
-  profileId: string;
+  profileId:   string;
   caregiverId: string;
-  onSuccess?: () => void;
+  draftId?:    string;       // existing log id when editing a draft
+  initialData?: Partial<DraftData>;  // pre-fill form when editing
+  onSuccess?:  () => void;
+}
+
+interface DraftData {
+  dayRating:        string | null;
+  mood:             number;
+  sleep:            string;
+  hoursSchool:      string;
+  hoursOutdoor:     string;
+  hoursAba:         string;
+  hoursHome:        string;
+  hoursScreen:      string;
+  outdoorActivities:string[];
+  medications:      string[];
+  foodBreakfast:    string[];
+  foodLunch:        string[];
+  foodDinner:       string[];
+  foodSnacks:       string[];
+  notes:            string;
 }
 
 interface FormErrors {
@@ -97,26 +118,30 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 
 // ── Main form ─────────────────────────────────────────────────
 
-export default function LogForm({ profileId, caregiverId, onSuccess }: LogFormProps) {
+export default function LogForm({ profileId, caregiverId, draftId, initialData, onSuccess }: LogFormProps) {
   const router = useRouter();
-  const [dayRating,    setDayRating]    = useState<DayRating | null>(null);
-  const [mood,         setMood]         = useState<number>(5);
-  const [sleep,        setSleep]        = useState<string>("");
-  const [hoursSchool,  setHoursSchool]  = useState("");
-  const [hoursOutdoor, setHoursOutdoor] = useState("");
-  const [hoursAba,     setHoursAba]     = useState("");
-  const [hoursHome,    setHoursHome]    = useState("");
-  const [hoursScreen,  setHoursScreen]  = useState("");
-  const [outdoorActivities, setOutdoorActivities] = useState<string[]>([]);
-  const [medications,   setMedications]   = useState<string[]>([]);
-  const [foodBreakfast, setFoodBreakfast] = useState<string[]>([]);
-  const [foodLunch,     setFoodLunch]     = useState<string[]>([]);
-  const [foodDinner,    setFoodDinner]    = useState<string[]>([]);
-  const [foodSnacks,    setFoodSnacks]    = useState<string[]>([]);
-  const [notes,   setNotes]   = useState("");
-  const [errors,  setErrors]  = useState<FormErrors>({});
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [dayRating,    setDayRating]    = useState<DayRating | null>((initialData?.dayRating as DayRating) ?? null);
+  const [mood,         setMood]         = useState<number>(initialData?.mood ?? 5);
+  const [sleep,        setSleep]        = useState<string>(initialData?.sleep ?? "");
+  const [hoursSchool,  setHoursSchool]  = useState(initialData?.hoursSchool  ?? "");
+  const [hoursOutdoor, setHoursOutdoor] = useState(initialData?.hoursOutdoor ?? "");
+  const [hoursAba,     setHoursAba]     = useState(initialData?.hoursAba     ?? "");
+  const [hoursHome,    setHoursHome]    = useState(initialData?.hoursHome    ?? "");
+  const [hoursScreen,  setHoursScreen]  = useState(initialData?.hoursScreen  ?? "");
+  const [outdoorActivities, setOutdoorActivities] = useState<string[]>(initialData?.outdoorActivities ?? []);
+  const [medications,   setMedications]   = useState<string[]>(initialData?.medications   ?? []);
+  const [foodBreakfast, setFoodBreakfast] = useState<string[]>(initialData?.foodBreakfast ?? []);
+  const [foodLunch,     setFoodLunch]     = useState<string[]>(initialData?.foodLunch     ?? []);
+  const [foodDinner,    setFoodDinner]    = useState<string[]>(initialData?.foodDinner    ?? []);
+  const [foodSnacks,    setFoodSnacks]    = useState<string[]>(initialData?.foodSnacks    ?? []);
+  const [notes,       setNotes]       = useState(initialData?.notes ?? "");
+  const [errors,      setErrors]      = useState<FormErrors>({});
+  const [loading,     setLoading]     = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaved,  setDraftSaved]  = useState(false);
+  const [success,     setSuccess]     = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftId);
+  const isEditing = !!currentDraftId;
 
   const foodState: Record<string, { tags: string[]; setter: (t: string[]) => void }> = {
     breakfast: { tags: foodBreakfast, setter: setFoodBreakfast },
@@ -130,7 +155,7 @@ export default function LogForm({ profileId, caregiverId, onSuccess }: LogFormPr
     return isNaN(n) ? null : Math.min(Math.max(n, 0), 24);
   }
 
-  function validate(): boolean {
+  function validate(requireAll = true): boolean {
     const errs: FormErrors = {};
     if (sleep !== "") {
       const s = parseFloat(sleep);
@@ -140,18 +165,14 @@ export default function LogForm({ profileId, caregiverId, onSuccess }: LogFormPr
     return Object.keys(errs).length === 0;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
-    setErrors({});
-
-    const supabase = getSupabase();
-    const { error } = await supabase.from("logs").insert({
+  function buildPayload(status: "draft" | "published") {
+    return {
       profile_id:         profileId,
       caregiver_id:       caregiverId,
+      last_edited_by:     caregiverId,
+      status,
       day_rating:         dayRating,
-      mood,
+      mood:               mood ?? null,
       sleep:              sleep ? parseFloat(sleep) : null,
       medications,
       notes:              notes.trim() || null,
@@ -165,12 +186,60 @@ export default function LogForm({ profileId, caregiverId, onSuccess }: LogFormPr
       food_lunch:         foodLunch,
       food_dinner:        foodDinner,
       food_snacks:        foodSnacks,
-    });
+    };
+  }
+
+  async function saveDraft(e?: React.MouseEvent) {
+    e?.preventDefault();
+    if (!validate()) return;
+    setSavingDraft(true);
+    setErrors({});
+    const supabase = getSupabase();
+
+    let error;
+    if (currentDraftId) {
+      // Update existing draft
+      ({ error } = await supabase.from("logs")
+        .update(buildPayload("draft"))
+        .eq("id", currentDraftId));
+    } else {
+      // Create new draft
+      const { data, error: insertErr } = await supabase.from("logs")
+        .insert(buildPayload("draft"))
+        .select("id").single();
+      error = insertErr;
+      if (data) setCurrentDraftId(data.id);
+    }
+
+    if (error) { setErrors({ general: error.message }); }
+    else {
+      setDraftSaved(true);
+      setTimeout(() => setDraftSaved(false), 2500);
+    }
+    setSavingDraft(false);
+  }
+
+  async function handlePublish(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validate(true)) return;
+    setLoading(true);
+    setErrors({});
+    const supabase = getSupabase();
+
+    let error;
+    if (currentDraftId) {
+      ({ error } = await supabase.from("logs")
+        .update(buildPayload("published"))
+        .eq("id", currentDraftId));
+    } else {
+      ({ error } = await supabase.from("logs")
+        .insert(buildPayload("published")));
+    }
 
     if (error) { setErrors({ general: error.message }); setLoading(false); return; }
     setSuccess(true);
     setLoading(false);
-    setTimeout(() => { if (onSuccess) onSuccess(); else router.push("/dashboard"); }, 1200);
+    setTimeout(() => { if (onSuccess) onSuccess(); else router.push("/dashboard"); }, 1000);
   }
 
   if (success) {
@@ -405,20 +474,44 @@ export default function LogForm({ profileId, caregiverId, onSuccess }: LogFormPr
 
       {/* ══ Submit bar ══════════════════════════════════════════ */}
       <div
-        className="flex gap-3 sticky bottom-0 py-4 px-6 -mx-6"
+        className="flex flex-wrap items-center gap-3 sticky bottom-0 py-4 px-6 -mx-6"
         style={{
-          background:   "var(--color-surface)",
-          borderTop:    "1px solid var(--color-border)",
+          background:     "var(--color-surface)",
+          borderTop:      "1px solid var(--color-border)",
           backdropFilter: "blur(8px)",
         }}
       >
-        <button type="submit" disabled={loading} className="btn-primary" aria-busy={loading}>
+        {/* Publish */}
+        <button type="submit" disabled={loading || savingDraft} className="btn-primary" aria-busy={loading}>
           {loading
-            ? <><LoadingSpinner size={16} label="Saving…" /> Saving…</>
-            : <><Save size={16} aria-hidden="true" /> Save log entry</>
+            ? <><LoadingSpinner size={16} label="Publishing…" /> Publishing…</>
+            : <><Send size={16} aria-hidden="true" /> {isEditing ? "Update & publish" : "Publish log"}</>
           }
         </button>
-        <button type="button" onClick={() => router.push("/dashboard")} className="btn-ghost">
+
+        {/* Save draft */}
+        <button
+          type="button"
+          onClick={saveDraft}
+          disabled={loading || savingDraft}
+          className="btn-ghost"
+          aria-busy={savingDraft}
+        >
+          {savingDraft
+            ? <><LoadingSpinner size={16} label="Saving…" /> Saving draft…</>
+            : <><Save size={16} aria-hidden="true" /> {isEditing ? "Save changes" : "Save as draft"}</>
+          }
+        </button>
+
+        {/* Draft saved indicator */}
+        {draftSaved && (
+          <span className="text-sm flex items-center gap-1.5 animate-fade-in"
+            style={{ color: "var(--color-accent)" }}>
+            <Clock3 size={14} aria-hidden="true" /> Draft saved
+          </span>
+        )}
+
+        <button type="button" onClick={() => router.push("/dashboard")} className="btn-ghost ml-auto">
           Cancel
         </button>
       </div>

@@ -15,14 +15,15 @@ import Link from "next/link";
 
 // ── AI quick-summary via backend ──────────────────────────────
 
-async function fetchQuickSummary(profileName: string, logs: Log[]): Promise<string> {
+async function fetchQuickSummary(profileName: string, logs: Log[], profileContext?: string): Promise<string> {
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/analyze`,
+    `${typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_SITE_URL ? `https://${process.env.NEXT_PUBLIC_SITE_URL}` : "http://localhost:3000")}/api/analyze`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        profile_name: profileName,
+        profile_name:    profileName,
+        profile_context: profileContext,
         logs: logs.slice(0, 7).map((l) => ({
           mood:        l.mood,
           sleep:       l.sleep,
@@ -130,9 +131,11 @@ function DeleteModal({
 function AISummaryBanner({
   profileName,
   logs,
+  profileContext,
 }: {
-  profileName: string;
-  logs: Log[];
+  profileName:      string;
+  logs:             Log[];
+  profileContext?:  string;
 }) {
   const [summary,  setSummary]  = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
@@ -151,7 +154,7 @@ function AISummaryBanner({
     setLoading(true);
     setError(false);
 
-    fetchQuickSummary(profileName, logs)
+    fetchQuickSummary(profileName, logs, profileContext)
       .then((s) => { if (!cancelled) { setSummary(s); setLoading(false); } })
       .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
 
@@ -267,12 +270,13 @@ export default function DashboardPage() {
   const router  = useRouter();
   const supabase = getSupabase();
 
-  const [profile,      setProfile]      = useState<Profile | null>(null);
-  const [logs,         setLogs]         = useState<Log[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState<string | null>(null);
-  const [deletingId,   setDeletingId]   = useState<string | null>(null);  // log id pending delete
-  const [deleteLoading,setDeleteLoading]= useState(false);
+  const [profile,        setProfile]        = useState<Profile | null>(null);
+  const [profileContext, setProfileContext]  = useState("");
+  const [logs,           setLogs]           = useState<Log[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [deletingId,     setDeletingId]     = useState<string | null>(null);
+  const [deleteLoading,  setDeleteLoading]  = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -323,7 +327,18 @@ export default function DashboardPage() {
         event: "INSERT", schema: "public", table: "logs",
         filter: `profile_id=eq.${profile.id}`,
       }, (payload) => {
-        setLogs((prev) => [payload.new as Log, ...prev]);
+        setLogs((prev) => {
+          if (prev.find((l) => l.id === (payload.new as Log).id)) return prev;
+          return [payload.new as Log, ...prev];
+        });
+      })
+      .on("postgres_changes", {
+        event: "UPDATE", schema: "public", table: "logs",
+        filter: `profile_id=eq.${profile.id}`,
+      }, (payload) => {
+        setLogs((prev) => prev.map((l) =>
+          l.id === (payload.new as Log).id ? (payload.new as Log) : l
+        ));
       })
       .on("postgres_changes", {
         event: "DELETE", schema: "public", table: "logs",
@@ -424,7 +439,7 @@ export default function DashboardPage() {
       {/* ── AI weekly summary (shows after 3+ logs) ──────────── */}
       {profile && logs.length >= 3 && (
         <div className="animate-fade-up stagger-3">
-          <AISummaryBanner profileName={profile.child_name} logs={logs} />
+          <AISummaryBanner profileName={profile.child_name} logs={logs} profileContext={profileContext} />
         </div>
       )}
 
@@ -461,44 +476,58 @@ export default function DashboardPage() {
               Add first log
             </Link>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {logs.map((log, i) => (
+        ) : (() => {
+            const drafts    = logs.filter((l) => l.status === "draft");
+            const published = logs.filter((l) => l.status !== "draft");
+
+            const LogRow = ({ log, i }: { log: (typeof logs)[0]; i: number }) => (
               <div
                 key={log.id}
                 className="animate-fade-up relative group"
                 style={{ animationDelay: `${i * 0.04}s`, opacity: 0 }}
               >
                 <LogCard log={log} />
-
-                {/* Delete button — hover on desktop, always visible on mobile */}
                 <button
                   onClick={() => setDeletingId(log.id)}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all touch-visible-delete"
-                  style={{
-                    background: "var(--color-surface)",
-                    border:     "1px solid var(--color-border)",
-                    color:      "var(--color-text-subtle)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(239,68,68,0.1)";
-                    e.currentTarget.style.color      = "var(--color-danger)";
-                    e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background   = "var(--color-surface)";
-                    e.currentTarget.style.color        = "var(--color-text-subtle)";
-                    e.currentTarget.style.borderColor  = "var(--color-border)";
-                  }}
+                  className="absolute top-3 right-14 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all touch-visible-delete"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-subtle)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "var(--color-danger)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--color-surface)"; e.currentTarget.style.color = "var(--color-text-subtle)"; e.currentTarget.style.borderColor = "var(--color-border)"; }}
                   aria-label={`Delete log from ${new Date(log.created_at).toLocaleDateString()}`}
-                  title="Delete this log"
+                  title="Delete"
                 >
                   <Trash2 size={14} aria-hidden="true" />
                 </button>
               </div>
-            ))}
-          </div>
-        )}
+            );
+
+            return (
+              <div className="space-y-6">
+                {drafts.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: "var(--color-text-subtle)" }}>Drafts in progress</h3>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
+                        {drafts.length}
+                      </span>
+                    </div>
+                    {drafts.map((log, i) => <LogRow key={log.id} log={log} i={i} />)}
+                  </div>
+                )}
+                {published.length > 0 && (
+                  <div className="space-y-3">
+                    {drafts.length > 0 && (
+                      <h3 className="text-xs font-semibold uppercase tracking-widest"
+                        style={{ color: "var(--color-text-subtle)" }}>Published logs</h3>
+                    )}
+                    {published.map((log, i) => <LogRow key={log.id} log={log} i={i} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
       </section>
 
       {/* ── Delete confirmation modal ─────────────────────────── */}

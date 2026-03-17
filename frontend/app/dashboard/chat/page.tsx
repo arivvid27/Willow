@@ -12,7 +12,8 @@ import Link from "next/link";
 
 export default function ChatPage() {
   const router = useRouter();
-  const [profileName, setProfileName] = useState("");
+  const [profileName,    setProfileName]    = useState("");
+  const [profileContext, setProfileContext] = useState("");
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export default function ChatPage() {
       // Get profile
       const { data: allChatAccess } = await supabase
         .from("caregiver_access")
-        .select("profile_id, profiles(child_name, id, full_name)")
+        .select("profile_id, profiles(child_name, id, full_name, diagnoses, allergies, therapist_name, school_name, additional_notes)")
         .eq("user_id", user.id);
       const savedChatId = typeof window !== "undefined"
         ? localStorage.getItem("willow:active_profile") : null;
@@ -49,6 +50,16 @@ export default function ChatPage() {
       // @ts-expect-error: joined relation
       const pId: string = access.profiles?.id ?? access.profile_id;
       setProfileName(pName);
+
+      // Build care profile context for AI
+      const prof = (access as any).profiles;
+      const ctx: string[] = [];
+      if (prof?.diagnoses?.length)   ctx.push(`Diagnoses: ${prof.diagnoses.join(", ")}`);
+      if (prof?.allergies?.length)   ctx.push(`Allergies/Sensitivities: ${prof.allergies.join(", ")}`);
+      if (prof?.therapist_name)      ctx.push(`Therapist: ${prof.therapist_name}`);
+      if (prof?.school_name)         ctx.push(`School: ${prof.school_name}`);
+      if (prof?.additional_notes)    ctx.push(`Context: ${prof.additional_notes}`);
+      if (ctx.length) setProfileContext(ctx.join("\n"));
 
       // Fetch last 14 days of logs for richer chat context
       const fourteenDaysAgo = new Date();
@@ -125,7 +136,7 @@ export default function ChatPage() {
 
       {/* Chat panel */}
       <div className="animate-fade-up stagger-2" style={{ borderRadius: "var(--radius-lg)" }}>
-        <WillowChat profileName={profileName} logs={logs} />
+        <WillowChat profileName={profileName} logs={logs} profileContext={profileContext} />
       </div>
     </div>
   );

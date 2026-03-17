@@ -19,10 +19,11 @@ interface ChatMessage {
 }
 
 interface ChatRequest {
-  profile_name: string;
-  message:      string;
-  history:      ChatMessage[];
-  logs:         LogEntry[];
+  profile_name:     string;
+  profile_context?: string;
+  message:          string;
+  history:          ChatMessage[];
+  logs:             LogEntry[];
 }
 
 // ── Chat system prompt (identical to chat_service.py) ─────────────────────────
@@ -57,14 +58,20 @@ Reference specific log entries when relevant (e.g. "I can see that on Tuesday, m
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildLogContext(profileName: string, logs: LogEntry[]): string {
-  if (!logs || logs.length === 0) {
-    return "No recent logs available for this care recipient.";
-  }
+function buildLogContext(profileName: string, logs: LogEntry[], profileContext?: string): string {
   const lines = [
-    `=== Recent Care Logs for ${profileName} ===`,
-    `(${logs.length} entries available as context)\n`,
+    `=== Care Recipient: ${profileName} ===`,
   ];
+  if (profileContext) {
+    lines.push("--- Care Profile ---");
+    lines.push(profileContext);
+    lines.push("--- End Care Profile ---\n");
+  }
+  if (!logs || logs.length === 0) {
+    lines.push("No recent logs available.");
+    return lines.join("\n");
+  }
+  lines.push(`=== Recent Care Logs (${logs.length} entries) ===`);
   for (const log of logs) {
     const date = log.created_at ?? "Unknown date";
     const meds = log.medications?.length ? log.medications.join(", ") : "None";
@@ -125,11 +132,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const logContext = buildLogContext(body.profile_name, body.logs ?? []);
+    const logContext = buildLogContext(body.profile_name, body.logs ?? [], body.profile_context);
     const contents   = buildGeminiContents(body.history ?? [], body.message, logContext);
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
       {
         method:  "POST",
         headers: { "Content-Type": "application/json" },

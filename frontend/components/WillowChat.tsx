@@ -16,8 +16,9 @@ interface Message {
 }
 
 interface WillowChatProps {
-  profileName: string;
-  logs: Log[];
+  profileName:     string;
+  logs:            Log[];
+  profileContext?: string;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -105,7 +106,7 @@ function TypingIndicator() {
   );
 }
 
-export default function WillowChat({ profileName, logs }: WillowChatProps) {
+export default function WillowChat({ profileName, logs, profileContext }: WillowChatProps) {
   const makeWelcome = (): Message => ({
     id: "welcome",
     role: "assistant",
