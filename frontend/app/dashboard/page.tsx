@@ -363,9 +363,10 @@ export default function DashboardPage() {
   }
 
   // Stats
-  const last7    = logs.slice(0, 7);
-  const avgMood  = last7.length ? (last7.reduce((s, l) => s + l.mood,  0) / last7.length).toFixed(1) : "—";
-  const avgSleep = last7.length ? (last7.reduce((s, l) => s + (l.sleep ?? 0), 0) / last7.length).toFixed(1) : "—";
+  const last7     = logs.slice(0, 7);
+  const moodLogs  = last7.filter((l) => l.mood != null);
+  const avgMood   = moodLogs.length ? (moodLogs.reduce((s, l) => s + (l.mood ?? 0), 0) / moodLogs.length).toFixed(1) : "—";
+  const avgSleep  = last7.length ? (last7.reduce((s, l) => s + (l.sleep ?? 0), 0) / last7.length).toFixed(1) : "—";
 
   if (loading) {
     return (

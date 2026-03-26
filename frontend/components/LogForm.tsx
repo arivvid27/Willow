@@ -257,7 +257,7 @@ export default function LogForm({ profileId, caregiverId, draftId, initialData, 
   const outdoorHours = parseHours(hoursOutdoor) ?? 0;
 
   return (
-    <form onSubmit={handleSubmit} noValidate aria-label="Daily care log entry" className="space-y-8">
+    <form onSubmit={handlePublish} noValidate aria-label="Daily care log entry" className="space-y-8">
 
       {/* Error banner */}
       {errors.general && (

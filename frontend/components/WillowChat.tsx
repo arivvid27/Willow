@@ -150,8 +150,11 @@ export default function WillowChat({ profileName, logs, profileContext }: Willow
         message: trimmed,
         history,
         logs: logs.map((l) => ({
-          mood: l.mood, sleep: l.sleep, medications: l.medications ?? [],
-          notes: l.notes ?? undefined, created_at: l.created_at,
+          mood: l.mood ?? 0,
+          sleep: l.sleep ?? 0,
+          medications: l.medications ?? [],
+          notes: l.notes ?? undefined,
+          created_at: l.created_at,
         })),
       });
       setMessages((prev) => [...prev, {

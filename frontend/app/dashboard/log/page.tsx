@@ -1,7 +1,7 @@
 "use client";
 // app/dashboard/log/page.tsx — New log or edit existing draft/log
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import LogForm from "@/components/LogForm";
@@ -9,7 +9,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-export default function NewLogPage() {
+function NewLogPageContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const editId       = searchParams.get("edit");
@@ -115,5 +115,19 @@ export default function NewLogPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function NewLogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <LoadingSpinner size={28} label="Loading log editor…" />
+        </div>
+      }
+    >
+      <NewLogPageContent />
+    </Suspense>
   );
 }
