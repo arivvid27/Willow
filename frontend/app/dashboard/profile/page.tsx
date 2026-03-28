@@ -17,7 +17,7 @@ interface ProfileData {
   allergies:          string[];
   emergency_contact:  string;
   emergency_phone:    string;
-  therapist_name:     string;
+  // therapist_name:     string;
   school_name:        string;
   additional_notes:   string;
 }
@@ -136,7 +136,7 @@ export default function CareProfilePage() {
       allergies:         p.allergies         ?? [],
       emergency_contact: p.emergency_contact ?? "",
       emergency_phone:   p.emergency_phone   ?? "",
-      therapist_name:    p.therapist_name    ?? "",
+      // therapist_name:    p.therapist_name    ?? "",
       school_name:       p.school_name       ?? "",
       additional_notes:  p.additional_notes  ?? "",
     });
@@ -159,7 +159,7 @@ export default function CareProfilePage() {
       allergies:         profile.allergies,
       emergency_contact: profile.emergency_contact || null,
       emergency_phone:   profile.emergency_phone   || null,
-      therapist_name:    profile.therapist_name    || null,
+      // therapist_name:    profile.therapist_name    || null,
       school_name:       profile.school_name       || null,
       additional_notes:  profile.additional_notes  || null,
     }).eq("id", profile.id);
@@ -250,7 +250,7 @@ export default function CareProfilePage() {
             onChange={canEdit ? (t) => update("allergies", t) : () => {}}
             placeholder="e.g. Peanuts, Latex, Loud sounds…"
           />
-          <div>
+          {/* <div>
             <label htmlFor="therapist" className="label">Primary therapist / specialist</label>
             <input id="therapist" type="text" className="input"
               value={profile.therapist_name}
@@ -258,7 +258,7 @@ export default function CareProfilePage() {
               placeholder="Dr. Smith, BCBA"
               disabled={!canEdit}
             />
-          </div>
+          </div> */}
         </Section>
 
         {/* ── Education ── */}
