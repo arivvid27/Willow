@@ -37,12 +37,13 @@ export async function analyzeLogs(payload: AnalyzeRequest & { profile_context?: 
 
 /** POST /api/chat — Multi-turn chat with log context */
 export async function sendChatMessage(payload: {
-  profile_name: string;
-  message:      string;
-  history:      { role: string; content: string }[];
+  profile_name:    string;
+  profile_context?:  string;
+  message:           string;
+  history:           { role: string; content: string }[];
   logs: {
-    mood:        number;
-    sleep:       number;
+    mood:        number | null;
+    sleep:       number | null;
     medications: string[];
     notes?:      string;
     created_at?: string;

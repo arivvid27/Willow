@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
       return NextResponse.json(
-        { detail: "GEMINI_API_KEY is not configured." },
+        { detail: "GEMINI_API_KEY is not set on the server. Add it in Vercel → Settings → Environment Variables." },
         { status: 500 }
       );
     }
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     // Call Gemini REST API directly — no SDK needed, no extra npm packages
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,12 +122,17 @@ export async function POST(req: NextRequest) {
     );
 
     if (!geminiRes.ok) {
-      const err = await geminiRes.text();
-      console.error("Gemini API error:", err);
-      return NextResponse.json(
-        { detail: "AI analysis failed. Check your Gemini API key." },
-        { status: 502 }
-      );
+      const errBody = await geminiRes.text();
+      console.error(`[/api/analyze] Gemini ${geminiRes.status}:`, errBody);
+      let detail = `Gemini API error (${geminiRes.status}).`;
+      try {
+        const parsed = JSON.parse(errBody);
+        const msg = parsed?.error?.message ?? "";
+        if (geminiRes.status === 403) detail = "Gemini API key is invalid or lacks permissions.";
+        if (geminiRes.status === 429) detail = "Gemini rate limit hit. Try again in a moment.";
+        if (geminiRes.status === 400) detail = `Bad request: ${msg}`;
+      } catch {}
+      return NextResponse.json({ detail }, { status: 502 });
     }
 
     const geminiData = await geminiRes.json();

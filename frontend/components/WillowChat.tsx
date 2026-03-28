@@ -146,15 +146,13 @@ export default function WillowChat({ profileName, logs, profileContext }: Willow
 
     try {
       const { reply } = await sendChatMessage({
-        profile_name: profileName,
-        message: trimmed,
+        profile_name:    profileName,
+        profile_context: profileContext,
+        message:         trimmed,
         history,
         logs: logs.map((l) => ({
-          mood: l.mood ?? 0,
-          sleep: l.sleep ?? 0,
-          medications: l.medications ?? [],
-          notes: l.notes ?? undefined,
-          created_at: l.created_at,
+          mood: l.mood, sleep: l.sleep, medications: l.medications ?? [],
+          notes: l.notes ?? undefined, created_at: l.created_at,
         })),
       });
       setMessages((prev) => [...prev, {

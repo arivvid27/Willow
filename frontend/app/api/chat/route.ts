@@ -1,12 +1,9 @@
 // app/api/chat/route.ts
-// Replaces FastAPI POST /chat — multi-turn Gemini chat with log context
 
 import { NextRequest, NextResponse } from "next/server";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 interface LogEntry {
-  mood:        number;
+  mood:        number | null;
   sleep?:      number | null;
   medications: string[];
   notes?:      string;
@@ -25,8 +22,6 @@ interface ChatRequest {
   history:          ChatMessage[];
   logs:             LogEntry[];
 }
-
-// ── Chat system prompt (identical to chat_service.py) ─────────────────────────
 
 const CHAT_SYSTEM_PROMPT = `You are Willow, a compassionate AI care assistant with expertise in 
 special needs care coordination, Applied Behavior Analysis (ABA), and family support.
@@ -56,12 +51,8 @@ IMPORTANT RULES:
 When log data is provided, you have access to it as context for the entire conversation.
 Reference specific log entries when relevant (e.g. "I can see that on Tuesday, mood was 3/10...").`;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function buildLogContext(profileName: string, logs: LogEntry[], profileContext?: string): string {
-  const lines = [
-    `=== Care Recipient: ${profileName} ===`,
-  ];
+  const lines = [`=== Care Recipient: ${profileName} ===`];
   if (profileContext) {
     lines.push("--- Care Profile ---");
     lines.push(profileContext);
@@ -76,58 +67,42 @@ function buildLogContext(profileName: string, logs: LogEntry[], profileContext?:
     const date = log.created_at ?? "Unknown date";
     const meds = log.medications?.length ? log.medications.join(", ") : "None";
     lines.push(
-      `• ${date} | Mood: ${log.mood}/10 | Sleep: ${log.sleep ?? "?"}h | Meds: ${meds} | Notes: ${log.notes ?? "None"}`
+      `• ${date} | Mood: ${log.mood ?? "?"}/ 10 | Sleep: ${log.sleep ?? "?"}h | Meds: ${meds} | Notes: ${log.notes ?? "None"}`
     );
   }
   lines.push("\n=== End of logs ===\n");
   return lines.join("\n");
 }
 
-// Convert our chat history to Gemini's contents format
-function buildGeminiContents(
-  history:    ChatMessage[],
-  message:    string,
-  logContext: string
-): object[] {
+function buildGeminiContents(history: ChatMessage[], message: string, logContext: string): object[] {
   const contents: object[] = [];
-
   history.forEach((msg, i) => {
     const role = msg.role === "user" ? "user" : "model";
-    // Inject log context before the very first user message
-    const text =
-      i === 0 && role === "user" && logContext
-        ? `${logContext}\n\nCaregiver: ${msg.content}`
-        : msg.content;
+    const text = i === 0 && role === "user" && logContext
+      ? `${logContext}\n\nCaregiver: ${msg.content}`
+      : msg.content;
     contents.push({ role, parts: [{ text }] });
   });
-
-  // Current message
-  const currentText =
-    history.length === 0 && logContext
-      ? `${logContext}\n\nCaregiver: ${message}`
-      : message;
+  const currentText = history.length === 0 && logContext
+    ? `${logContext}\n\nCaregiver: ${message}`
+    : message;
   contents.push({ role: "user", parts: [{ text: currentText }] });
-
   return contents;
 }
-
-// ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
     const body: ChatRequest = await req.json();
 
     if (!body.message?.trim()) {
-      return NextResponse.json(
-        { detail: "Message cannot be empty." },
-        { status: 422 }
-      );
+      return NextResponse.json({ detail: "Message cannot be empty." }, { status: 422 });
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
+      console.error("[/api/chat] GEMINI_API_KEY is not set");
       return NextResponse.json(
-        { detail: "GEMINI_API_KEY is not configured." },
+        { detail: "GEMINI_API_KEY is not configured on the server. Add it in Vercel → Settings → Environment Variables." },
         { status: 500 }
       );
     }
@@ -136,40 +111,46 @@ export async function POST(req: NextRequest) {
     const contents   = buildGeminiContents(body.history ?? [], body.message, logContext);
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: CHAT_SYSTEM_PROMPT }] },
           contents,
-          generationConfig: {
-            temperature:     0.6,
-            maxOutputTokens: 1024,
-          },
+          generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
         }),
       }
     );
 
     if (!geminiRes.ok) {
-      const err = await geminiRes.text();
-      console.error("Gemini chat error:", err);
-      return NextResponse.json(
-        { detail: "AI chat failed. Check your Gemini API key." },
-        { status: 502 }
-      );
+      const errBody = await geminiRes.text();
+      // Log full Gemini error server-side so it appears in Vercel function logs
+      console.error(`[/api/chat] Gemini ${geminiRes.status}:`, errBody);
+
+      // Parse error for a friendlier message
+      let detail = `Gemini API error (${geminiRes.status}).`;
+      try {
+        const parsed = JSON.parse(errBody);
+        const msg = parsed?.error?.message ?? "";
+        if (geminiRes.status === 400) detail = `Bad request to Gemini: ${msg}`;
+        if (geminiRes.status === 403) detail = "Gemini API key is invalid or lacks permissions. Check your key at aistudio.google.com.";
+        if (geminiRes.status === 429) detail = "Gemini rate limit hit. Wait a moment and try again.";
+        if (geminiRes.status === 503) detail = "Gemini is temporarily unavailable. Try again in a moment.";
+      } catch {}
+
+      return NextResponse.json({ detail }, { status: 502 });
     }
 
     const geminiData = await geminiRes.json();
     const reply: string =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't generate a response.";
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ??
+      "Sorry, I couldn't generate a response.";
 
     return NextResponse.json({ reply });
+
   } catch (err) {
-    console.error("/api/chat error:", err);
-    return NextResponse.json(
-      { detail: "Internal server error." },
-      { status: 500 }
-    );
+    console.error("[/api/chat] Unhandled error:", err);
+    return NextResponse.json({ detail: "Internal server error." }, { status: 500 });
   }
 }
